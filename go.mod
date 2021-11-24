@@ -18,8 +18,8 @@ require (
 	github.com/pkg/sftp v1.11.0
 	github.com/prasad83/goftp v0.0.0-20210325080443-f57aaed46a32
 	github.com/secsy/goftp v0.0.0-20200609142545-aa2de14babf4 // indirect
-	github.com/stretchr/testify v1.7.0
-	github.com/tidwall/gjson v1.6.5
+	github.com/stretchr/testify v1.7.0 // indirect
+	github.com/tidwall/gjson v1.9.3
 	github.com/tidwall/sjson v1.0.4
 	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871
 	golang.org/x/image v0.0.0-20210622092929-e6eecd499c2c

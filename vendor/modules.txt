@@ -61,8 +61,6 @@ github.com/cretz/bine/tor
 github.com/cretz/bine/torutil
 github.com/cretz/bine/torutil/ed25519
 github.com/cretz/bine/torutil/ed25519/internal/edwards25519
-# github.com/davecgh/go-spew v1.1.1
-github.com/davecgh/go-spew/spew
 # github.com/emirpasic/gods v1.12.0
 github.com/emirpasic/gods/containers
 github.com/emirpasic/gods/lists
@@ -123,8 +121,6 @@ github.com/patrickmn/go-cache
 github.com/pkg/errors
 # github.com/pkg/sftp v1.11.0
 github.com/pkg/sftp
-# github.com/pmezard/go-difflib v1.0.0
-github.com/pmezard/go-difflib/difflib
 # github.com/prasad83/goftp v0.0.0-20210325080443-f57aaed46a32
 github.com/prasad83/goftp
 # github.com/sergi/go-diff v1.0.0
@@ -134,13 +130,11 @@ github.com/src-d/gcfg
 github.com/src-d/gcfg/scanner
 github.com/src-d/gcfg/token
 github.com/src-d/gcfg/types
-# github.com/stretchr/testify v1.7.0
-github.com/stretchr/testify/assert
-# github.com/tidwall/gjson v1.6.5
+# github.com/tidwall/gjson v1.9.3
 github.com/tidwall/gjson
-# github.com/tidwall/match v1.0.3
+# github.com/tidwall/match v1.1.1
 github.com/tidwall/match
-# github.com/tidwall/pretty v1.0.2
+# github.com/tidwall/pretty v1.2.0
 github.com/tidwall/pretty
 # github.com/tidwall/sjson v1.0.4
 github.com/tidwall/sjson
@@ -334,5 +328,3 @@ gopkg.in/src-d/go-git.v4/utils/merkletrie/internal/frame
 gopkg.in/src-d/go-git.v4/utils/merkletrie/noder
 # gopkg.in/warnings.v0 v0.1.2
 gopkg.in/warnings.v0
-# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
-gopkg.in/yaml.v3
