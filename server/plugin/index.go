@@ -6,6 +6,7 @@ import (
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_authenticate_ldap"
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_authenticate_openid"
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_authenticate_saml"
+	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_backend_accountserver"
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_backend_backblaze"
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_backend_dav"
 	_ "github.com/mickael-kerjean/filestash/server/plugin/plg_backend_dropbox"
