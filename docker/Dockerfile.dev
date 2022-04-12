@@ -2,16 +2,25 @@
 # Stage 1: Build filestash
 #
 
-FROM debian:stable-slim AS build
+FROM debian:unstable-slim AS build
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -y golang npm curl libglib2.0-dev libpangoft2-1.0-0 make git
+RUN apt-get install -y curl make gcc g++ xz-utils pkg-config python3-pip autoconf libtool unzip python-setuptools cmake git
 
-COPY . /src
+#
+# Prepare deps
+#
 
+COPY server/plugin/plg_image_light/deps /deps
+WORKDIR /deps
+RUN ./create_libresize.sh
+RUN ./create_libtranscode.sh
 
 #
 # Prepare Build
 #
+
+COPY . /src
 
 WORKDIR /src
 RUN \
@@ -24,14 +33,20 @@ RUN \
 # Build backend
 #
 
-WORKDIR /src/server/plugin/plg_image_light/deps
-RUN ./create_libresize.sh
-RUN ./create_libtranscode.sh
-RUN cp libtranscode.a libtranscode_`uname -s`-`uname -m`.a
-RUN cp libresize.a libresize_`uname -s`-`uname -m`.a
+# relocation R_X86_64_PC32 against symbol `memset@@GLIBC_2.2.5' can not be used when making a PIE object; recompile with -fPIE
+#WORKDIR /src/server/plugin/plg_image_light/deps
+#RUN ./create_libresize.sh
+#RUN ./create_libtranscode.sh
+#RUN cp libtranscode.a libtranscode_`uname -s`-`uname -m`.a
+#RUN cp libresize.a libresize_`uname -s`-`uname -m`.a
+#RUN /src/server/plugin/plg_image_light/install.sh
 
+RUN go generate -x ./server/...
+
+WORKDIR /src
 #RUN make build_init
-RUN make build_backend
+RUN make CGO_LDFLAGS="-no-pie -lm -lpthread -lgmodule-2.0 -lgobject-2.0 -lglib-2.0 -ldl -L/deps -L/src/server/plugin/plg_image_light/deps -l:libresize_linux_$(dpkg --print-architecture).a -l:libtranscode_linux_$(dpkg --print-architecture).a" build_backend
+#RUN make CGO_LDFLAGS="-no-pie -lm -lpthread -lgmodule-2.0 -lgobject-2.0 -lglib-2.0 -ldl -L/src/server/plugin/plg_image_light/deps -l:libresize.a -l:libtranscode.a" build_backend
 RUN cp dist/filestash filestash/
 RUN chmod -R o+r+w+x ./dist/data
 

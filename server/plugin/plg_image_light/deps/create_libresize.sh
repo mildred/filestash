@@ -19,6 +19,8 @@ apt install -y curl make gcc g++ xz-utils pkg-config python3-pip autoconf libtoo
 #pip3 install --user meson ninja
 export PATH=~/.local/bin:$PATH
 
+LIBVIPS_VERSION=8.12.2
+
 ################################################
 # Stage 1: Get libvips and its dependencies + recompile for less headaches
 INITIAL_PATH=`pwd`
@@ -26,11 +28,11 @@ mkdir -p /tmp/filestash/libresize/tmp
 cd /tmp/filestash/libresize
 apt install -y libvips-dev
 cd tmp
-curl -L -X GET https://github.com/libvips/libvips/releases/download/v8.7.0/vips-8.7.0.tar.gz > libvips.tar.gz
+curl -L -X GET https://github.com/libvips/libvips/releases/download/v$LIBVIPS_VERSION/vips-$LIBVIPS_VERSION.tar.gz > libvips.tar.gz
 tar -zxf libvips.tar.gz
-cd vips-8.7.0/
+cd vips-$LIBVIPS_VERSION/
 ./configure --enable-static --without-magick --without-lcms  --without-OpenEXR --without-nifti --without-pdfium --without-rsvg --without-matio --without-libwebp --without-cfitsio --without-zlib --without-poppler --without-pangoft2 --enable-introspection=no --without-openslide
-make -j 8
+make -j8 V=0
 make install
 cd $INITIAL_PATH
 
@@ -80,8 +82,8 @@ ar x /usr/lib/$libpath/libjbig.a
 ar x /usr/lib/$libpath/libexif.a
 ar x /usr/lib/$libpath/libpcre.a
 ar x /usr/lib/$libpath/libtiff.a
-ar x /usr/lib/$libpath/libpangoft2-1.0.a
-ar x /usr/lib/$libpath/libpoppler.a
+#ar x /usr/lib/$libpath/libpangoft2-1.0.a
+#ar x /usr/lib/$libpath/libpoppler.a
 
 ar rcs libresize.a *.o
 rm *.o *.ao
