@@ -44,6 +44,8 @@ func (this AccountServer) Init(params map[string]string, app *App) (IBackend, er
 
 	var authenticated bool
 
+	defer res.Body.Close()
+
 	err = json.NewDecoder(res.Body).Decode(&authenticated)
 	if err != nil {
 		return this, err
