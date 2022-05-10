@@ -4,8 +4,10 @@
 
 FROM debian:unstable-slim AS build
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update && apt-get install -y golang npm curl libglib2.0-dev libpangoft2-1.0-0 make git
-RUN apt-get install -y curl make gcc g++ xz-utils pkg-config python3-pip autoconf libtool unzip python-setuptools cmake git
+RUN apt-get update && apt-get install -y \
+    golang npm curl libglib2.0-dev libpangoft2-1.0-0 make git \
+    curl make gcc g++ xz-utils pkg-config python3-pip autoconf libtool unzip python-setuptools cmake git \
+    libraw-dev libjpeg-dev libgcc-11-dev libvips-dev
 
 #
 # Prepare deps
@@ -13,8 +15,10 @@ RUN apt-get install -y curl make gcc g++ xz-utils pkg-config python3-pip autocon
 
 COPY server/plugin/plg_image_light/deps /deps
 WORKDIR /deps
-RUN ./create_libresize.sh
 RUN ./create_libtranscode.sh
+RUN ./create_libresize.sh
+RUN cp libtranscode.a libtranscode_linux_$(dpkg --print-architecture).a
+RUN cp libresize.a libresize_linux_$(dpkg --print-architecture).a
 
 #
 # Prepare Build
@@ -45,8 +49,12 @@ RUN go generate -x ./server/...
 
 WORKDIR /src
 #RUN make build_init
-RUN make CGO_LDFLAGS="-no-pie -lm -lpthread -lgmodule-2.0 -lgobject-2.0 -lglib-2.0 -ldl -L/deps -L/src/server/plugin/plg_image_light/deps -l:libresize_linux_$(dpkg --print-architecture).a -l:libtranscode_linux_$(dpkg --print-architecture).a" build_backend
-#RUN make CGO_LDFLAGS="-no-pie -lm -lpthread -lgmodule-2.0 -lgobject-2.0 -lglib-2.0 -ldl -L/src/server/plugin/plg_image_light/deps -l:libresize.a -l:libtranscode.a" build_backend
+# When the GNU linker sees a library (-l), it discards all symbols that it
+# doesn't need. In case a .o or .a file is after a -l flag, the symbols from
+# the library are discarded before the object file is considered.
+RUN make GOFLAGS="" CGO_LDFLAGS="-L/deps -L/src/server/plugin/plg_image_light/deps -L/usr/lib/x86_64-linux-gnu/ -l:libresize_linux_$(dpkg --print-architecture).a -l:libtranscode_linux_$(dpkg --print-architecture).a  -l:libXext.a -l:libc.a -l:libfreetype.a -l:libopenjp2.a -no-pie -lm -lpthread -lgmodule-2.0 -lgobject-2.0 -lglib-2.0 -ldl -l:libzstd.so.1 -ldeflate $(pkg-config --libs --static gio-2.0 pango cairo) -lwebp" build_backend
+#RUN make CGO_LDFLAGS="-no-pie -lm -lpthread -lgmodule-2.0 -lgobject-2.0 -lglib-2.0 -ldl -L/deps -L/src/server/plugin/plg_image_light/deps -l:libresize.a -l:libtranscode.a" build_backend
+RUN ldd dist/filestash
 RUN cp dist/filestash filestash/
 RUN chmod -R o+r+w+x ./dist/data
 

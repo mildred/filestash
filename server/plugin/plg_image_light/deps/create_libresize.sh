@@ -69,6 +69,7 @@ ar x /usr/lib/$libpath/libfontconfig.a
 ar x /usr/lib/$libpath/libXext.a
 ar x /usr/lib/$libpath/libSM.a
 ar x /usr/lib/$libpath/libX11.a
+ar x /usr/lib/$libpath/libXext.a
 ar x /usr/lib/$libpath/liborc-0.4.a
 ar x /usr/lib/$libpath/libltdl.a
 ar x /usr/lib/$libpath/librt.a
