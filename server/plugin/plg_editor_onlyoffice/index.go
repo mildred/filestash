@@ -249,7 +249,7 @@ func IframeContentHandler(ctx App, res http.ResponseWriter, req *http.Request) {
 		username = "Anonymous"
 		userId = RandomString(10)
 	}
-	filestashServerLocation = Config.Get("features.office.onlyoffice_server").String()
+	filestashServerLocation = Config.Get("features.office.onlyoffice_callback_url").String()
 	if filestashServerLocation == "" {
 		localip = func() string { // https://stackoverflow.com/questions/23558425/how-do-i-get-the-local-ip-address-in-go#23558495
 			addrs, err := net.InterfaceAddrs()

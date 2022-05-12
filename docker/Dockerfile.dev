@@ -1,84 +1,109 @@
 #
-# Stage 1: Build filestash
+# Stage 1: Define base image
 #
 
-FROM debian:unstable-slim AS build
+FROM debian:unstable-slim AS base
+
+#
+# Stage 2: Build base image
+#
+
+FROM base AS build-image
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -y \
     golang npm curl libglib2.0-dev libpangoft2-1.0-0 make git \
     curl make gcc g++ xz-utils pkg-config python3-pip autoconf libtool unzip python-setuptools cmake git \
-    libraw-dev libjpeg-dev libgcc-11-dev libvips-dev
+    libraw-dev libjpeg-dev libgcc-11-dev libvips-dev liblcms2-dev
 
 #
-# Prepare deps
+# Stage 3: Build libtranscode
 #
 
-COPY server/plugin/plg_image_light/deps /deps
+FROM build-image AS build-libtranscode
+
+COPY server/plugin/plg_image_light/deps/src/libtranscode* /deps/src/
 WORKDIR /deps
-RUN ./create_libtranscode.sh
-RUN ./create_libresize.sh
-RUN cp libtranscode.a libtranscode_linux_$(dpkg --print-architecture).a
-RUN cp libresize.a libresize_linux_$(dpkg --print-architecture).a
+RUN gcc -shared -fPIC -Wall -o libtranscode.so src/libtranscode.c -llcms2 -lraw
+RUN ldd /deps/libtranscode.so
 
 #
-# Prepare Build
+# Stage 4: Build libresize
 #
 
-COPY . /src
+FROM build-image AS build-libresize
 
+COPY server/plugin/plg_image_light/deps/src/libresize* /deps/src/
+WORKDIR /deps
+RUN gcc -shared -fPIC -Wall -o libresize.so src/libresize.c -lvips $(pkg-config --cflags glib-2.0)
+RUN ldd /deps/libresize.so
+
+#
+# Stage 5: Build filestash frontend
+#
+
+FROM build-image AS build-frontend
+
+COPY package.json Makefile /src/
 WORKDIR /src
+
+# <https://stackoverflow.com/questions/67241196/error-no-template-named-remove-cv-t-in-namespace-std-did-you-mean-remove>
+RUN CXXFLAGS="--std=c++17" npm install --include=dev --force
+
+COPY client/ ./client/
+COPY config/ ./config/
+COPY *.js .babelrc .eslintrc.json .
+
+RUN make build_frontend
+
 RUN \
     mkdir -p ./dist/data/state/config && \
     cp config/config.json ./dist/data/state/config/ && \
     mkdir -p ./filestash/data/state/config && \
     cp config/config.json ./filestash/data/state/config/
+RUN chmod -R o+r+w+x ./dist/data
+
+#
+# Stage 6: Build filestash backend
+#
+
+FROM build-image AS build-backend
+
+COPY --from=build-libtranscode /deps/libtranscode.so /usr/local/lib/libtranscode.so
+COPY --from=build-libresize /deps/libresize.so /usr/local/lib/libresize.so
+
+WORKDIR /src
+COPY Makefile go.* ./
+COPY config/ ./config/
+COPY server/ ./server/
+COPY vendor/ ./vendor/
+COPY .git/ ./.git/
 
 #
 # Build backend
 #
 
-# relocation R_X86_64_PC32 against symbol `memset@@GLIBC_2.2.5' can not be used when making a PIE object; recompile with -fPIE
-#WORKDIR /src/server/plugin/plg_image_light/deps
-#RUN ./create_libresize.sh
-#RUN ./create_libtranscode.sh
-#RUN cp libtranscode.a libtranscode_`uname -s`-`uname -m`.a
-#RUN cp libresize.a libresize_`uname -s`-`uname -m`.a
-#RUN /src/server/plugin/plg_image_light/install.sh
-
 RUN go generate -x ./server/...
 
-WORKDIR /src
-#RUN make build_init
 # When the GNU linker sees a library (-l), it discards all symbols that it
 # doesn't need. In case a .o or .a file is after a -l flag, the symbols from
 # the library are discarded before the object file is considered.
-RUN make GOFLAGS="" CGO_LDFLAGS="-L/deps -L/src/server/plugin/plg_image_light/deps -L/usr/lib/x86_64-linux-gnu/ -l:libresize_linux_$(dpkg --print-architecture).a -l:libtranscode_linux_$(dpkg --print-architecture).a  -l:libXext.a -l:libc.a -l:libfreetype.a -l:libopenjp2.a -no-pie -lm -lpthread -lgmodule-2.0 -lgobject-2.0 -lglib-2.0 -ldl -l:libzstd.so.1 -ldeflate $(pkg-config --libs --static gio-2.0 pango cairo) -lwebp" build_backend
-#RUN make CGO_LDFLAGS="-no-pie -lm -lpthread -lgmodule-2.0 -lgobject-2.0 -lglib-2.0 -ldl -L/deps -L/src/server/plugin/plg_image_light/deps -l:libresize.a -l:libtranscode.a" build_backend
+RUN mkdir /deps && ar r /deps/libresize_linux_amd64.a && ar r /deps/libtranscode_linux_amd64.a
+RUN make GOFLAGS="" CGO_LDFLAGS="-L/deps -lresize -ltranscode" build_backend
+ENV LD_LIBRARY_PATH /usr/local/lib
 RUN ldd dist/filestash
-RUN cp dist/filestash filestash/
-RUN chmod -R o+r+w+x ./dist/data
 
 #
-# Build Frontend
+# Stage 7: Build final Docker Image
 #
 
-RUN npm install --silent --include=dev --force
-RUN make build_frontend
-RUN cp -R ./dist/data/public ./filestash/data/public
-
-RUN chmod -R o-r-w-x- ./filestash
-
-#
-# Stage 2: Build final Docker Image
-#
-
-FROM debian:stable-slim
+FROM base
 MAINTAINER mickael@kerjean.me
 
 ENV DEBIAN_FRONTEND noninteractive
+ENV LD_LIBRARY_PATH /usr/local/lib
 
 RUN mkdir -p /app
-COPY --from=build /src/filestash /app/filestash
+WORKDIR /app
 
 # org-mode: html export
 COPY server/.assets/emacs/htmlize.el /usr/share/emacs/site-lisp/htmlize.el
@@ -122,10 +147,23 @@ RUN apt-get update > /dev/null && \
     rm -rf /var/lib/apt/lists/* && \
     rm -rf /tmp/*
 
-USER filestash
-RUN timeout 1 /app/filestash | grep -q start
+RUN apt-get update && \
+    apt-get install -y libvips libraw20 libglib2.0-0 && \
+    apt-get purge -y --auto-remove && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm -rf /tmp/*
 
+COPY --from=build-libtranscode /deps/libtranscode.so /usr/local/lib/libtranscode.so
+COPY --from=build-libresize /deps/libresize.so /usr/local/lib/libresize.so
+COPY --from=build-frontend /src/dist/data /app/data
+COPY --from=build-backend /src/dist/filestash /app/filestash
+
+RUN \
+    ldd /app/filestash && \
+    mkdir -p /app/data/state/log && \
+    ln -s /app/filestash /bin/filestash
+
+USER filestash
 EXPOSE 8334
 VOLUME ["/app/data/state/"]
-WORKDIR "/app"
 CMD ["/app/filestash"]
