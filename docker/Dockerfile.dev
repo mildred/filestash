@@ -88,7 +88,7 @@ RUN go generate -x ./server/...
 # doesn't need. In case a .o or .a file is after a -l flag, the symbols from
 # the library are discarded before the object file is considered.
 RUN mkdir /deps && ar r /deps/libresize_linux_amd64.a && ar r /deps/libtranscode_linux_amd64.a
-RUN make GOFLAGS="" CGO_LDFLAGS="-L/deps -lresize -ltranscode" build_backend
+RUN make CGO_LDFLAGS="-L/deps -lresize -ltranscode" build_backend
 ENV LD_LIBRARY_PATH /usr/local/lib
 RUN ldd dist/filestash
 
